@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>KADOOSH — Sword & Shield</title>
+<style>
+  :root{
+    --bg:#060a14; --grid:#1fb6ff; --grid-soft:rgba(31,182,255,.55); --grid-glow:rgba(31,182,255,.30);
+    --text:#dfeefb; --text-dim:#6f86a3;
+    --gold-1:#ffe6a3; --gold-2:#eaa92f; --gold-edge:#b9821f;
+    --silver-1:#f6fbff; --silver-2:#aac1d4; --silver-edge:#7d93a8;
+    --danger:#ff486b;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  body{
+    background:radial-gradient(120% 90% at 50% -10%, #0d1a30 0%, #070c18 55%, #04060d 100%);
+    color:var(--text); font-family:"SF Pro Display","Helvetica Neue",system-ui,Arial,sans-serif;
+    display:flex; flex-direction:column; align-items:center; min-height:100%; padding:8px 10px 14px; gap:8px; overflow-x:hidden;
+  }
+
+  .panel{
+    width:min(92vw,400px); display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:9px 14px; border:1px solid rgba(31,182,255,.18); border-radius:14px;
+    background:linear-gradient(180deg,#0c1626,#070d18);
+  }
+  body.pvp .panel.silver{transform:rotate(180deg);}
+  .panel.active{border-color:var(--grid); box-shadow:0 0 0 1px var(--grid), 0 0 22px -4px var(--grid-glow);}
+  .who{display:flex; flex-direction:column; line-height:1.1;}
+  .who .name{font-size:14px; letter-spacing:.3em; text-transform:uppercase; font-weight:700;}
+  .who.gold .name{color:var(--gold-1);}
+  .who.silver .name{color:var(--silver-1);}
+  .who .state{font-size:10.5px; letter-spacing:.16em; color:var(--text-dim); text-transform:uppercase; min-height:13px; margin-top:2px;}
+  .pips{display:flex; gap:6px;}
+  .pip{width:13px; height:13px; border-radius:50%; border:1px solid rgba(31,182,255,.3); background:#0a1322;}
+  .pip.on.gold{background:radial-gradient(circle at 35% 30%,var(--gold-1),var(--gold-2)); border-color:var(--gold-edge); box-shadow:0 0 8px -1px var(--gold-2);}
+  .pip.on.silver{background:radial-gradient(circle at 35% 30%,var(--silver-1),var(--silver-2)); border-color:var(--silver-edge); box-shadow:0 0 8px -1px var(--silver-2);}
+  .flipbtn{
+    font:inherit; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
+    color:#04111c; background:linear-gradient(180deg,#5fd0ff,var(--grid)); border:1px solid #0f7fb8; border-radius:9px;
+    padding:9px 12px; cursor:pointer; opacity:0; pointer-events:none; transition:opacity .15s, transform .05s;
+    min-width:112px; box-shadow:0 0 14px -3px var(--grid-glow);
+  }
+  .flipbtn.show{opacity:1; pointer-events:auto;}
+  .flipbtn:active{transform:translateY(1px);}
+
+  .crest{text-align:center; line-height:1;}
+  .crest h1{
+    margin:0; font-size:26px; letter-spacing:.4em; font-weight:800;
+    background:linear-gradient(180deg,#bdeaff,#1fb6ff); -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-indent:.4em; text-shadow:0 0 22px var(--grid-glow);
+  }
+  .crest p{margin:3px 0 0; font-size:10px; letter-spacing:.34em; text-transform:uppercase; color:var(--text-dim);}
+
+  .board-wrap{position:relative; width:min(92vw,400px);}
+  .board{
+    width:100%; aspect-ratio:1/1; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
+    gap:12px; padding:12px; border-radius:12px; background:radial-gradient(circle at 50% 40%, #0a1526, #05080f);
+    box-shadow:0 0 44px -12px var(--grid-glow), inset 0 0 0 1px rgba(31,182,255,.22);
+  }
+  .cell{
+    position:relative; aspect-ratio:1/1; border-radius:7px; background:linear-gradient(180deg,#0a1322,#070d18);
+    box-shadow:inset 0 0 0 1.6px var(--grid-soft), inset 0 0 16px -3px var(--grid-glow), 0 0 10px -3px var(--grid-glow);
+    display:flex; align-items:center; justify-content:center; cursor:default; padding:0; font:inherit;
+  }
+  .cell.target{cursor:pointer; box-shadow:inset 0 0 0 2px var(--grid), inset 0 0 22px -4px var(--grid-glow), 0 0 16px -3px var(--grid);}
+  .cell.target::after{
+    content:""; position:absolute; width:30%; height:30%; border-radius:50%; border:2px solid var(--grid);
+    box-shadow:0 0 12px -1px var(--grid); animation:pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{transform:scale(.7); opacity:.4;}50%{transform:scale(1.05); opacity:.95;}}
+
+  .coin{width:80%; height:80%; border-radius:50%; display:flex; align-items:center; justify-content:center; position:relative; cursor:default;}
+  .coin.gold{background:linear-gradient(160deg,var(--gold-1),var(--gold-2) 70%,var(--gold-edge)); box-shadow:inset 0 0 0 2px rgba(255,255,255,.35), 0 4px 12px -4px #000, 0 0 14px -5px var(--gold-2);}
+  .coin.silver{background:linear-gradient(160deg,var(--silver-1),var(--silver-2) 70%,var(--silver-edge)); box-shadow:inset 0 0 0 2px rgba(255,255,255,.5), 0 4px 12px -4px #000, 0 0 14px -5px var(--silver-2);}
+  .coin.mine{cursor:pointer;}
+  .coin.selected{box-shadow:inset 0 0 0 2px rgba(255,255,255,.4), 0 0 0 3px var(--grid), 0 0 20px -2px var(--grid);}
+  .coin svg{width:52%; height:52%;}
+  .coin .ico-engrave{fill:#5c4410;}
+  .coin.silver .ico-engrave{fill:#3a4a5c;}
+  .coin.sword::before{content:""; position:absolute; inset:-3px; border-radius:50%; box-shadow:0 0 12px -1px var(--danger); opacity:.7;}
+  .coin.sword.selected::before{opacity:.35;}
+  .coin.dead{background:radial-gradient(circle at 40% 32%,#2b3850,#141b29 70%,#0c111b); box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), 0 3px 8px -3px #000; cursor:default;}
+  .coin.dead.gold{outline:2px solid var(--gold-edge);}
+  .coin.dead.silver{outline:2px solid var(--silver-edge);}
+  .coin.dead .skull{fill:#cdd9e6;}
+  .coin.dead .eye{fill:#0c111b;}
+
+  .burst{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(0); pointer-events:none; z-index:30; opacity:0;}
+  .burst.go{animation:kadoosh .8s cubic-bezier(.2,1.4,.4,1) forwards;}
+  @keyframes kadoosh{
+    0%{opacity:0; transform:translate(-50%,-50%) scale(.2) rotate(-18deg);}
+    25%{opacity:1; transform:translate(-50%,-50%) scale(1.15) rotate(6deg);}
+    70%{opacity:1; transform:translate(-50%,-50%) scale(1) rotate(-3deg);}
+    100%{opacity:0; transform:translate(-50%,-50%) scale(1.05) rotate(0);}
+  }
+  .burst svg{display:block; filter:drop-shadow(0 0 14px rgba(31,182,255,.8));}
+  .burst .word{font-family:"Arial Black",Impact,system-ui,sans-serif; font-weight:900; font-style:italic; font-size:30px; letter-spacing:.02em; fill:#fff; stroke:#0a4f7a; stroke-width:5px; paint-order:stroke;}
+  @media (prefers-reduced-motion:reduce){
+    .burst.go{animation:kadooshRM .7s ease forwards;}
+    @keyframes kadooshRM{0%{opacity:0;transform:translate(-50%,-50%) scale(.6);}30%{opacity:1;transform:translate(-50%,-50%) scale(1);}100%{opacity:0;}}
+    .cell.target::after{animation:none;}
+  }
+
+  .overlay{position:fixed; inset:0; background:rgba(4,7,14,.78); z-index:40; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .2s; backdrop-filter:blur(2px);}
+  .overlay.show{opacity:1; pointer-events:auto;}
+  .card{width:min(90vw,360px); text-align:center; background:linear-gradient(180deg,#0d1726,#080e1a); border:1px solid rgba(31,182,255,.25); border-radius:16px; padding:22px 20px; box-shadow:0 20px 50px -16px #000, 0 0 40px -16px var(--grid-glow);}
+  .card h2{margin:0 0 6px; font-size:21px; letter-spacing:.06em;}
+  .card h2.gold{color:var(--gold-1);} .card h2.silver{color:var(--silver-1);}
+  .card p{margin:0 0 16px; color:var(--text-dim); font-size:13px; line-height:1.5;}
+  .card button{font:inherit; font-size:12.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:#04111c; background:linear-gradient(180deg,#5fd0ff,var(--grid)); border:1px solid #0f7fb8; border-radius:10px; padding:11px 18px; cursor:pointer; box-shadow:0 0 16px -4px var(--grid-glow);}
+  .card button:active{transform:translateY(1px);}
+
+  .links{display:flex; gap:18px; margin-top:2px;}
+  .links button{background:none; border:none; color:var(--text-dim); font:inherit; font-size:11px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; padding:4px;}
+  .links button:active{color:var(--grid);}
+
+  .rules{text-align:left;}
+  .rules p{color:var(--text); margin:0 0 9px;}
+  .rules .flag{color:var(--grid); font-size:11.5px; line-height:1.5;}
+
+  /* ---- start screen ---- */
+  .start{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:22px;
+    background:radial-gradient(120% 90% at 50% 10%, #0d1a30 0%, #070c18 55%, #04060d 100%);
+    opacity:0; pointer-events:none; transition:opacity .25s;}
+  .start.show{opacity:1; pointer-events:auto;}
+  .start-card{width:min(92vw,380px); text-align:center; display:flex; flex-direction:column; align-items:center; gap:22px;}
+  .start .crest h1{font-size:40px;}
+  .start .crest p{font-size:11px; margin-top:6px;}
+  .modes{width:100%; display:flex; flex-direction:column; gap:16px;}
+  .big-btn{
+    width:100%; font:inherit; font-size:14px; letter-spacing:.18em; text-transform:uppercase; font-weight:800;
+    color:#04111c; background:linear-gradient(180deg,#7adcff,var(--grid)); border:1px solid #0f7fb8; border-radius:12px;
+    padding:16px; cursor:pointer; box-shadow:0 0 22px -6px var(--grid-glow);
+  }
+  .big-btn:active{transform:translateY(1px);}
+  .cpu-block{border:1px solid rgba(31,182,255,.2); border-radius:14px; padding:14px 14px 12px; background:linear-gradient(180deg,#0b1424,#070d18);}
+  .cpu-label{font-size:10.5px; letter-spacing:.28em; text-transform:uppercase; color:var(--text-dim); margin-bottom:11px;}
+  .lvls{display:grid; grid-template-columns:repeat(3,1fr); gap:9px;}
+  .lvl-btn{
+    font:inherit; font-size:12.5px; letter-spacing:.08em; text-transform:uppercase; font-weight:700; color:var(--text);
+    background:linear-gradient(180deg,#13243c,#0c1626); border:1px solid rgba(31,182,255,.35); border-radius:10px; padding:13px 4px; cursor:pointer;
+  }
+  .lvl-btn[data-level="king"]{border-color:rgba(255,182,80,.5); color:#ffe6a3;}
+  .lvl-btn:active{transform:translateY(1px); border-color:var(--grid);}
+  .lvl-hint{margin-top:10px; font-size:10px; letter-spacing:.06em; color:var(--text-dim);}
+  .ver{font-size:11px; letter-spacing:.3em; color:var(--text-dim);}
+</style>
+</head>
+<body>
+
+  <div class="panel silver" id="panel-S">
+    <div class="who silver"><span class="name">Silver</span><span class="state" id="state-S"></span></div>
+    <div class="pips" id="pips-S"></div>
+    <button class="flipbtn" id="flip-S">Flip</button>
+  </div>
+
+  <div class="crest"><h1>KADOOSH</h1><p>Sword &amp; Shield · best of 9</p></div>
+
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+    <div class="burst" id="burst">
+      <svg width="220" height="160" viewBox="0 0 220 160">
+        <polygon fill="#1fb6ff" stroke="#0a4f7a" stroke-width="3"
+          points="110,4 130,46 178,30 158,72 214,80 158,92 184,140 132,112 118,156 102,112 44,140 64,92 6,80 64,70 40,30 90,46"/>
+        <text class="word" x="110" y="92" text-anchor="middle">KADOOSH!</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="panel gold" id="panel-G">
+    <div class="who gold"><span class="name">Gold</span><span class="state" id="state-G"></span></div>
+    <div class="pips" id="pips-G"></div>
+    <button class="flipbtn" id="flip-G">Flip</button>
+  </div>
+
+  <div class="links">
+    <button id="btn-menu">Menu</button>
+    <button id="btn-rules">Rules</button>
+    <button id="btn-new">New match</button>
+  </div>
+
+  <div class="overlay" id="overlay"><div class="card" id="card"></div></div>
+
+  <div class="start show" id="start">
+    <div class="start-card">
+      <div class="crest"><h1>KADOOSH</h1><p>Sword &amp; Shield</p></div>
+      <div class="modes">
+        <button class="big-btn" data-mode="pvp">Two players</button>
+        <div class="cpu-block">
+          <div class="cpu-label">Play vs CPU</div>
+          <div class="lvls">
+            <button class="lvl-btn" data-level="knight">Knight</button>
+            <button class="lvl-btn" data-level="prince">Prince</button>
+            <button class="lvl-btn" data-level="king">King</button>
+          </div>
+          <div class="lvl-hint">King is the toughest</div>
+        </div>
+      </div>
+      <div class="ver" id="ver">v1.0.0</div>
+    </div>
+  </div>
+
+<script>
+"use strict";
+(function(){
+  const VERSION = "v1.1.0";
+  const N = 9, WIN_ROUNDS = 5;
+  const ENEMY = {S:'G', G:'S'};
+  const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+  const ICONS = {
+    shield: '<svg viewBox="0 0 24 24"><path class="ico-engrave" d="M12 2 L20 5 V11 C20 16 16.4 19.6 12 22 C7.6 19.6 4 16 4 11 V5 Z M12 4.4 L6 6.6 V11 C6 14.6 8.7 17.4 12 19.4 C15.3 17.4 18 14.6 18 11 V6.6 Z"/></svg>',
+    sword:  '<svg viewBox="0 0 24 24"><path class="ico-engrave" d="M13.2 2 L15 3.9 V12.4 H11.7 V3.9 Z M9 12.4 H17.3 V14.1 H9 Z M12.3 14.1 H14 V19 H12.3 Z M9.8 19 H16.5 V20.8 H9.8 Z"/></svg>',
+    skull:  '<svg viewBox="0 0 24 24"><path class="skull" d="M12 2.4 C7.3 2.4 4 6.1 4 10.8 C4 13.6 5.4 15.5 6.7 16.6 V19.4 H8.7 V17.6 H10.6 V19.4 H13.4 V17.6 H15.3 V19.4 H17.3 V16.6 C18.6 15.5 20 13.6 20 10.8 C20 6.1 16.7 2.4 12 2.4 Z"/><circle class="eye" cx="9.1" cy="11" r="2"/><circle class="eye" cx="14.9" cy="11" r="2"/></svg>'
+  };
+
+  // ---------- live state ----------
+  let cells, turn, starter, selected, lastMove, score, busy, matchOver;
+  let mode='pvp', level=null, cpuSide=null, awaitingContinue=false, thinking=false;
+
+  const NB = (()=>{ const a=[]; for(let i=0;i<N;i++){ const r=(i/3|0),c=i%3,o=[]; if(r>0)o.push(i-3); if(r<2)o.push(i+3); if(c>0)o.push(i-1); if(c<2)o.push(i+1); a.push(o);} return a; })();
+  const neighbors = i => NB[i];
+
+  function newRound(){
+    cells = new Array(N).fill(null);
+    [0,1,2].forEach(i=> cells[i]={owner:'S', face:'shield'});
+    [6,7,8].forEach(i=> cells[i]={owner:'G', face:'shield'});
+    turn = starter; selected = null; lastMove = {S:null, G:null};
+    busy = false; awaitingContinue = false; thinking = false;
+    render(); maybeCpu();
+  }
+  function newMatch(){ score = {S:0, G:0}; starter = 'S'; matchOver = false; newRound(); }
+
+  // ---------- legality (no undo of your own last move) ----------
+  function isUndoMove(from,to){ const lm=lastMove[turn]; return lm && lm.t==='move' && lm.from===to && lm.to===from; }
+  function isUndoFlip(i){ const lm=lastMove[turn]; return lm && lm.t==='flip' && lm.idx===i; }
+  function legalTargets(i){ return neighbors(i).filter(n=> cells[n]===null && !isUndoMove(i,n)); }
+  function canFlip(i){ return cells[i] && cells[i].face!=='skull' && !isUndoFlip(i); }
+
+  // ---------- combat ----------
+  // Resolve combat from the active player's perspective (the one who just acted).
+  // A sword next to an enemy sword takes it (attacker wins the clash, defender is in retreat).
+  // A shield surrounded by 2+ enemy swords can't defend both sides and falls.
+  function resolveAll(arr, active){
+    const opp = ENEMY[active], kills = [];
+    for(let i=0;i<N;i++){
+      const e = arr[i]; if(!e || e.owner!==opp || e.face==='skull') continue;
+      let adjSwords = 0;
+      for(const n of neighbors(i)){ const a=arr[n]; if(a && a.owner===active && a.face==='sword') adjSwords++; }
+      if(e.face==='sword' && adjSwords>=1) kills.push(i);
+      else if(e.face==='shield' && adjSwords>=2) kills.push(i);
+    }
+    return kills;
+  }
+  function aliveIn(arr,owner){ let n=0; for(const c of arr) if(c && c.owner===owner && c.face!=='skull') n++; return n; }
+
+  // ---------- actions ----------
+  function doMove(from,to){ cells[to]=cells[from]; cells[from]=null; lastMove[turn]={t:'move',from,to}; finishTurn(to); }
+  function doFlip(i){ cells[i].face = cells[i].face==='shield'?'sword':'shield'; lastMove[turn]={t:'flip',idx:i}; finishTurn(i); }
+
+  function finishTurn(actedIdx){
+    selected=null;
+    const kills=resolveAll(cells,turn);
+    if(kills.length){
+      busy=true; kills.forEach(k=> cells[k].face='skull'); render();
+      kadoosh(kills, ()=>{ busy=false; if(!checkRoundEnd()){ turn=ENEMY[turn]; render(); maybeCpu(); } });
+    } else { turn=ENEMY[turn]; render(); maybeCpu(); }
+  }
+
+  function checkRoundEnd(){
+    const loser = aliveIn(cells,'S')===0 ? 'S' : aliveIn(cells,'G')===0 ? 'G' : null;
+    if(!loser) return false;
+    const winner=ENEMY[loser]; score[winner]++; render();
+    if(score[winner]>=WIN_ROUNDS){ matchOver=true; showMatchEnd(winner); }
+    else { awaitingContinue=true; showRoundEnd(winner); }
+    return true;
+  }
+
+  // ---------- CPU ----------
+  function genMoves(c, t, last, ignore){
+    const out=[];
+    for(let i=0;i<N;i++){ const tok=c[i]; if(!tok||tok.owner!==t||tok.face==='skull') continue;
+      for(const n of neighbors(i)){ if(c[n]===null){ const undo = !ignore && last[t] && last[t].t==='move' && last[t].from===n && last[t].to===i; if(!undo) out.push({t:'move',from:i,to:n}); } }
+      const fundo = !ignore && last[t] && last[t].t==='flip' && last[t].idx===i;
+      if(!fundo) out.push({t:'flip',idx:i});
+    }
+    return out;
+  }
+  function moves(s){ let m=genMoves(s.c,s.turn,s.last,false); if(m.length===0) m=genMoves(s.c,s.turn,s.last,true); return m; }
+  function apply(s,mv){
+    const c=s.c.map(e=> e?{owner:e.owner,face:e.face}:null);
+    let acted;
+    if(mv.t==='move'){ c[mv.to]=c[mv.from]; c[mv.from]=null; acted=mv.to; }
+    else { c[mv.idx].face = c[mv.idx].face==='shield'?'sword':'shield'; acted=mv.idx; }
+    resolveAll(c, s.turn).forEach(k=> c[k].face='skull');
+    const last={S:s.last.S?Object.assign({},s.last.S):null, G:s.last.G?Object.assign({},s.last.G):null};
+    last[s.turn]= mv.t==='move'?{t:'move',from:mv.from,to:mv.to}:{t:'flip',idx:mv.idx};
+    return {c, turn:ENEMY[s.turn], last};
+  }
+  // Can the opponent take token i with a single move under the new combat rules?
+  function killable(c,i){
+    const tok=c[i]; if(!tok||tok.face==='skull') return false;
+    const att=ENEMY[tok.owner];
+    let adjSwords=0, adjShields=0; const empties=[];
+    for(const j of neighbors(i)){ const e=c[j];
+      if(e){ if(e.owner===att && e.face==='sword') adjSwords++; if(e.owner===att && e.face==='shield') adjShields++; }
+      else empties.push(j);
+    }
+    // attacker could add one more adjacent sword next move: flip an adjacent shield, or slide a sword in
+    let canAddSword = adjShields>0;
+    if(!canAddSword) for(const j of empties){ for(const k of neighbors(j)){ const a=c[k]; if(a && a.owner===att && a.face==='sword' && k!==i){ canAddSword=true; break; } } if(canAddSword) break; }
+    if(tok.face==='sword') return adjSwords>=1 || canAddSword;
+    return adjSwords>=2 || (adjSwords===1 && canAddSword);
+  }
+  function threatenedCount(c,victim){
+    let n=0;
+    for(let i=0;i<N;i++){ const t=c[i]; if(t && t.owner===victim && t.face!=='skull' && killable(c,i)) n++; }
+    return n;
+  }
+  function evalFor(s,me){
+    const opp=ENEMY[me], myA=aliveIn(s.c,me), opA=aliveIn(s.c,opp);
+    if(opA===0) return 100000; if(myA===0) return -100000;
+    let sc=1000*(myA-opA);
+    sc -= 140*threatenedCount(s.c,me);
+    sc += 120*threatenedCount(s.c,opp);
+    const ctr=s.c[4]; if(ctr && ctr.face!=='skull') sc += (ctr.owner===me?8:-8);
+    return sc;
+  }
+  function negamax(s,depth,alpha,beta){
+    const me=s.turn, opp=ENEMY[me];
+    const myA=aliveIn(s.c,me), opA=aliveIn(s.c,opp);
+    if(opA===0) return 100000+depth;
+    if(myA===0) return -100000-depth;
+    if(depth===0) return evalFor(s,me);
+    const ms=moves(s);
+    ms.sort((a,b)=> evalFor(apply(s,b),me)-evalFor(apply(s,a),me));
+    let best=-Infinity;
+    for(const mv of ms){ const v=-negamax(apply(s,mv),depth-1,-beta,-alpha); if(v>best)best=v; if(best>alpha)alpha=best; if(alpha>=beta)break; }
+    return best;
+  }
+  function chooseCpuMove(){
+    const s={ c:cells.map(e=> e?{owner:e.owner,face:e.face}:null), turn,
+              last:{S:lastMove.S?Object.assign({},lastMove.S):null, G:lastMove.G?Object.assign({},lastMove.G):null} };
+    const ms=moves(s); if(ms.length===0) return null;
+    const depth = level==='knight'?1 : level==='prince'?3 : 5;
+    if(level==='knight' && Math.random()<0.35) return ms[(Math.random()*ms.length)|0];
+    ms.sort((a,b)=> evalFor(apply(s,b),cpuSide)-evalFor(apply(s,a),cpuSide));
+    let best=ms[0], bestV=-Infinity;
+    for(const mv of ms){ const v=-negamax(apply(s,mv),depth-1,-Infinity,Infinity); if(v>bestV){ bestV=v; best=mv; } }
+    return best;
+  }
+  function maybeCpu(){
+    if(mode!=='cpu'||matchOver||busy||awaitingContinue||turn!==cpuSide) return;
+    thinking=true; renderPanels();
+    setTimeout(()=>{
+      if(mode!=='cpu'||matchOver||awaitingContinue||turn!==cpuSide){ thinking=false; return; }
+      const mv=chooseCpuMove(); thinking=false;
+      if(!mv){ render(); return; }
+      if(mv.t==='move') doMove(mv.from,mv.to); else doFlip(mv.idx);
+    }, 480);
+  }
+
+  // ---------- KADOOSH ----------
+  function kadoosh(kills, done){
+    const burst=document.getElementById('burst'), board=document.getElementById('board');
+    const target=board.children[kills[0]];
+    const br=board.getBoundingClientRect(), tr=target.getBoundingClientRect();
+    burst.style.left=(tr.left-br.left+tr.width/2)+'px';
+    burst.style.top=(tr.top-br.top+tr.height/2)+'px';
+    burst.classList.remove('go'); void burst.offsetWidth; burst.classList.add('go');
+    setTimeout(done, 760);
+  }
+
+  // ---------- render ----------
+  function render(){
+    const board=document.getElementById('board'); board.innerHTML='';
+    const sel=selected, targets = sel!=null ? legalTargets(sel) : [];
+    for(let i=0;i<N;i++){
+      const isTarget=targets.includes(i);
+      const cell=document.createElement(isTarget?'button':'div');
+      cell.className='cell'+(isTarget?' target':'');
+      const t=cells[i];
+      if(t){
+        const coin=document.createElement('div');
+        const mine=(t.owner===turn && t.face!=='skull' && !busy && !matchOver && !(mode==='cpu'&&turn===cpuSide));
+        coin.className='coin '+(t.owner==='G'?'gold':'silver')+(t.face==='sword'?' sword':'')+(t.face==='skull'?' dead':'')+(mine?' mine':'')+(i===sel?' selected':'');
+        coin.innerHTML=ICONS[t.face];
+        if(mine) coin.onclick=(e)=>{ e.stopPropagation(); selectCoin(i); };
+        cell.appendChild(coin);
+      }
+      if(isTarget) cell.onclick=()=> doMove(sel,i);
+      board.appendChild(cell);
+    }
+    renderPanels();
+  }
+  function renderPanels(){
+    for(const p of ['S','G']){
+      document.getElementById('panel-'+p).classList.toggle('active', turn===p && !matchOver && !awaitingContinue);
+      const box=document.getElementById('pips-'+p); box.innerHTML='';
+      for(let k=0;k<WIN_ROUNDS;k++){ const pip=document.createElement('div'); pip.className='pip '+(p==='G'?'gold':'silver')+(k<score[p]?' on':''); box.appendChild(pip); }
+      let label='';
+      if(matchOver) label='';
+      else if(mode==='cpu' && p===cpuSide) label = thinking?'thinking…':('CPU · '+cap(level));
+      else if(turn===p) label = (selected!=null?'choose a square':'your move');
+      document.getElementById('state-'+p).textContent=label;
+      const fb=document.getElementById('flip-'+p);
+      const show=(turn===p && selected!=null && !busy && !matchOver && canFlip(selected) && !(mode==='cpu'&&p===cpuSide));
+      fb.classList.toggle('show', show);
+      if(show){ fb.textContent = cells[selected].face==='shield'?'Draw sword':'Raise shield'; fb.onclick=()=> doFlip(selected); }
+      else fb.onclick=null;
+    }
+  }
+  function selectCoin(i){ if(busy||matchOver) return; selected=(selected===i)?null:i; render(); }
+
+  // ---------- overlays ----------
+  const overlay=document.getElementById('overlay'), card=document.getElementById('card');
+  function showOverlay(html){ card.innerHTML=html; overlay.classList.add('show'); }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+  function showRoundEnd(winner){
+    const name=winner==='G'?'Gold':'Silver';
+    showOverlay('<h2 class="'+(winner==='G'?'gold':'silver')+'">'+name+' wins the round</h2>'+
+      '<p>Match &nbsp;Silver '+score.S+' — '+score.G+' Gold<br>'+(ENEMY[winner]==='S'?'Silver':'Gold')+' starts next.</p>'+
+      '<button id="ov-next">Next round</button>');
+    document.getElementById('ov-next').onclick=()=>{ hideOverlay(); starter=ENEMY[starter]; newRound(); };
+  }
+  function showMatchEnd(winner){
+    const name=winner==='G'?'Gold':'Silver';
+    showOverlay('<h2 class="'+(winner==='G'?'gold':'silver')+'">'+name+' takes the match</h2>'+
+      '<p>Final &nbsp;Silver '+score.S+' — '+score.G+' Gold</p><button id="ov-again">New match</button>');
+    document.getElementById('ov-again').onclick=()=>{ hideOverlay(); newMatch(); };
+  }
+
+  // ---------- links / start ----------
+  document.getElementById('btn-new').onclick=()=>{ hideOverlay(); newMatch(); };
+  document.getElementById('btn-menu').onclick=()=>{ hideOverlay(); startShow(); };
+  document.getElementById('btn-rules').onclick=()=>{
+    showOverlay('<div class="rules"><h2 style="text-align:center">How it plays</h2>'+
+      '<p>Tap one of your tokens, then tap a glowing square to <b>move</b> (up/down/left/right into an empty square), or use <b>flip</b> to switch between shield and sword.</p>'+
+      '<p>End your turn as a <b>sword</b> next to an enemy <b>sword</b> to take it — <i>KADOOSH</i> — and it becomes a skull that blocks the square. Whoever strikes on their turn wins the clash; the other is in retreat.</p>'+
+      '<p>A <b>shield</b> blocks a single sword, but caught between <b>two</b> enemy swords it can\'t defend both sides and falls.</p>'+
+      '<p>Take out all three enemy tokens to win the round. First to '+WIN_ROUNDS+' rounds wins. You can\'t undo your own last move.</p>'+
+      '<p class="flag">Design forks I picked — say the word to change any: (1) the strike triggers on moving into range, not only on a flip; (2) flips go both ways; (3) Silver starts on top.</p>'+
+      '</div><div style="text-align:center"><button id="ov-close">Got it</button></div>');
+    document.getElementById('ov-close').onclick=hideOverlay;
+  };
+
+  const startEl=document.getElementById('start');
+  function startShow(){ startEl.classList.add('show'); }
+  function startHide(){ startEl.classList.remove('show'); }
+  function startGame(m, lvl){
+    mode=m; level=lvl||null; cpuSide = (m==='cpu') ? 'S' : null;
+    document.body.classList.toggle('pvp', m==='pvp');
+    startHide(); newMatch();
+  }
+  startEl.querySelector('[data-mode="pvp"]').onclick=()=> startGame('pvp');
+  startEl.querySelectorAll('.lvl-btn').forEach(b=> b.onclick=()=> startGame('cpu', b.dataset.level));
+  document.getElementById('ver').textContent=VERSION;
+
+  // boot: show start; prime a hidden board so layout is ready
+  score={S:0,G:0}; cells=new Array(N).fill(null); turn='S'; selected=null; lastMove={S:null,G:null};
+  busy=false; matchOver=false; render();
+})();
+</script>
+</body>
+</html>
