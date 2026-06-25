@@ -87,7 +87,7 @@
   .coin.dead .skull{fill:#cdd9e6;}
   .coin.dead .eye{fill:#0c111b;}
 
-  .burst{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(0); pointer-events:none; z-index:30; opacity:0;}
+  .burst{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%) scale(0); pointer-events:none; z-index:50; opacity:0;}
   .burst.go{animation:kadoosh .8s cubic-bezier(.2,1.4,.4,1) forwards;}
   @keyframes kadoosh{
     0%{opacity:0; transform:translate(-50%,-50%) scale(.2) rotate(-18deg);}
@@ -97,9 +97,18 @@
   }
   .burst svg{display:block; filter:drop-shadow(0 0 14px rgba(31,182,255,.8));}
   .burst .word{font-family:"Arial Black",Impact,system-ui,sans-serif; font-weight:900; font-style:italic; font-size:30px; letter-spacing:.02em; fill:#fff; stroke:#0a4f7a; stroke-width:5px; paint-order:stroke;}
+  .burst.tall.go{animation:kadooshTall .9s cubic-bezier(.2,1.3,.4,1) forwards;}
+  @keyframes kadooshTall{
+    0%{opacity:0; transform:translate(-50%,-50%) rotate(-90deg) scale(calc(var(--k-scale,3) * .35));}
+    22%{opacity:1; transform:translate(-50%,-50%) rotate(-90deg) scale(calc(var(--k-scale,3) * 1.06));}
+    72%{opacity:1; transform:translate(-50%,-50%) rotate(-90deg) scale(var(--k-scale,3));}
+    100%{opacity:0; transform:translate(-50%,-50%) rotate(-90deg) scale(calc(var(--k-scale,3) * 1.03));}
+  }
   @media (prefers-reduced-motion:reduce){
     .burst.go{animation:kadooshRM .7s ease forwards;}
     @keyframes kadooshRM{0%{opacity:0;transform:translate(-50%,-50%) scale(.6);}30%{opacity:1;transform:translate(-50%,-50%) scale(1);}100%{opacity:0;}}
+    .burst.tall.go{animation:kadooshTallRM .7s ease forwards;}
+    @keyframes kadooshTallRM{0%{opacity:0;transform:translate(-50%,-50%) rotate(-90deg) scale(var(--k-scale,3));}28%{opacity:1;}100%{opacity:0;transform:translate(-50%,-50%) rotate(-90deg) scale(var(--k-scale,3));}}
     .cell.target::after{animation:none;}
   }
 
@@ -119,6 +128,17 @@
   .rules{text-align:left;}
   .rules p{color:var(--text); margin:0 0 9px;}
   .rules .flag{color:var(--grid); font-size:11.5px; line-height:1.5;}
+
+  /* ---- tall (5x9) layout: trim scoring chrome, enlarge board, vertical KADOOSH ---- */
+  body.tall .panel{padding:5px 12px;}
+  body.tall .who .name{font-size:11.5px; letter-spacing:.24em;}
+  body.tall .who .state{font-size:9px; min-height:11px; margin-top:1px;}
+  body.tall .pips{gap:4px;}
+  body.tall .pip{width:9px; height:9px;}
+  body.tall .flipbtn{min-width:92px; padding:7px 10px; font-size:10.5px;}
+  body.tall .crest h1{font-size:21px; letter-spacing:.34em;}
+  body.tall .crest p{font-size:9px;}
+  body.tall .board-wrap{width:min(96vw, calc(76vh * var(--ar,1)));}
 
   /* ---- start screen ---- */
   .start{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:22px;
@@ -161,13 +181,6 @@
 
   <div class="board-wrap">
     <div class="board" id="board"></div>
-    <div class="burst" id="burst">
-      <svg width="220" height="160" viewBox="0 0 220 160">
-        <polygon fill="#1fb6ff" stroke="#0a4f7a" stroke-width="3"
-          points="110,4 130,46 178,30 158,72 214,80 158,92 184,140 132,112 118,156 102,112 44,140 64,92 6,80 64,70 40,30 90,46"/>
-        <text class="word" x="110" y="92" text-anchor="middle">KADOOSH!</text>
-      </svg>
-    </div>
   </div>
 
   <div class="panel gold" id="panel-G">
@@ -180,6 +193,14 @@
     <button id="btn-menu">Menu</button>
     <button id="btn-rules">Rules</button>
     <button id="btn-new">New match</button>
+  </div>
+
+  <div class="burst" id="burst">
+    <svg width="220" height="160" viewBox="0 0 220 160">
+      <polygon fill="#1fb6ff" stroke="#0a4f7a" stroke-width="3"
+        points="110,4 130,46 178,30 158,72 214,80 158,92 184,140 132,112 118,156 102,112 44,140 64,92 6,80 64,70 40,30 90,46"/>
+      <text class="word" x="110" y="92" text-anchor="middle">KADOOSH!</text>
+    </svg>
   </div>
 
   <div class="overlay" id="overlay"><div class="card" id="card"></div></div>
@@ -207,14 +228,14 @@
           <div class="lvl-hint">King is the toughest</div>
         </div>
       </div>
-      <div class="ver" id="ver">v1.3.0</div>
+      <div class="ver" id="ver">v1.3.1</div>
     </div>
   </div>
 
 <script>
 "use strict";
 (function(){
-  const VERSION = "v1.3.0";
+  const VERSION = "v1.3.1";
   const WIN_ROUNDS = 5;
   const ENEMY = {S:'G', G:'S'};
   const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
@@ -252,6 +273,7 @@
     const big=Math.max(ROWS,COLS);
     const gap = big<=3?12 : big<=5?8 : 6;
     board.style.gap=gap+'px'; board.style.padding=gap+'px';
+    document.body.classList.toggle('tall', ROWS>COLS);
   }
 
   // ---------- live state ----------
@@ -443,12 +465,18 @@
   // ---------- KADOOSH ----------
   function kadoosh(kills, done){
     const burst=document.getElementById('burst'), board=document.getElementById('board');
-    const target=board.children[kills[0]];
-    const br=board.getBoundingClientRect(), tr=target.getBoundingClientRect();
-    burst.style.left=(tr.left-br.left+tr.width/2)+'px';
-    burst.style.top=(tr.top-br.top+tr.height/2)+'px';
+    const tall=document.body.classList.contains('tall');
+    burst.classList.toggle('tall', tall);
+    if(tall){
+      burst.style.left='50%'; burst.style.top='50%';
+      burst.style.setProperty('--k-scale', Math.max(2.2, window.innerHeight/200).toFixed(2));
+    } else {
+      const tr=board.children[kills[0]].getBoundingClientRect();
+      burst.style.left=(tr.left+tr.width/2)+'px';
+      burst.style.top=(tr.top+tr.height/2)+'px';
+    }
     burst.classList.remove('go'); void burst.offsetWidth; burst.classList.add('go');
-    setTimeout(done, 760);
+    setTimeout(done, tall?880:760);
   }
 
   // ---------- render ----------
