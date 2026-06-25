@@ -53,10 +53,10 @@
   }
   .crest p{margin:3px 0 0; font-size:10px; letter-spacing:.34em; text-transform:uppercase; color:var(--text-dim);}
 
-  .board-wrap{position:relative; width:min(92vw,400px);}
+  .board-wrap{position:relative; width:min(92vw, 400px, calc(60vh * var(--ar,1))); margin:0 auto;}
   .board{
-    width:100%; aspect-ratio:1/1; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
-    gap:12px; padding:12px; border-radius:12px; background:radial-gradient(circle at 50% 40%, #0a1526, #05080f);
+    width:100%; aspect-ratio:var(--ar,1); display:grid; gap:12px; padding:12px; border-radius:12px;
+    background:radial-gradient(circle at 50% 40%, #0a1526, #05080f);
     box-shadow:0 0 44px -12px var(--grid-glow), inset 0 0 0 1px rgba(31,182,255,.22);
   }
   .cell{
@@ -123,25 +123,26 @@
   /* ---- start screen ---- */
   .start{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:22px;
     background:radial-gradient(120% 90% at 50% 10%, #0d1a30 0%, #070c18 55%, #04060d 100%);
-    opacity:0; pointer-events:none; transition:opacity .25s;}
+    opacity:0; pointer-events:none; transition:opacity .25s; overflow:auto;}
   .start.show{opacity:1; pointer-events:auto;}
-  .start-card{width:min(92vw,380px); text-align:center; display:flex; flex-direction:column; align-items:center; gap:22px;}
+  .start-card{width:min(92vw,380px); text-align:center; display:flex; flex-direction:column; align-items:center; gap:20px;}
   .start .crest h1{font-size:40px;}
   .start .crest p{font-size:11px; margin-top:6px;}
-  .modes{width:100%; display:flex; flex-direction:column; gap:16px;}
-  .big-btn{
-    width:100%; font:inherit; font-size:14px; letter-spacing:.18em; text-transform:uppercase; font-weight:800;
-    color:#04111c; background:linear-gradient(180deg,#7adcff,var(--grid)); border:1px solid #0f7fb8; border-radius:12px;
-    padding:16px; cursor:pointer; box-shadow:0 0 22px -6px var(--grid-glow);
-  }
+  .seg-label{font-size:10.5px; letter-spacing:.28em; text-transform:uppercase; color:var(--text-dim); margin-bottom:9px;}
+  .boards{display:grid; grid-template-columns:repeat(3,1fr); gap:9px; width:100%;}
+  .board-btn{display:flex; flex-direction:column; gap:3px; align-items:center; font:inherit; font-size:13px; font-weight:700; letter-spacing:.06em;
+    color:var(--text); background:linear-gradient(180deg,#13243c,#0c1626); border:1px solid rgba(31,182,255,.3); border-radius:10px; padding:12px 4px; cursor:pointer;}
+  .board-btn small{font-size:9px; letter-spacing:.1em; color:var(--text-dim); font-weight:600;}
+  .board-btn.sel{border-color:var(--grid); box-shadow:0 0 0 1px var(--grid), 0 0 16px -5px var(--grid-glow); color:#bdeaff;}
+  .board-btn:active{transform:translateY(1px);}
+  .modes{width:100%; display:flex; flex-direction:column; gap:14px;}
+  .big-btn{width:100%; font:inherit; font-size:14px; letter-spacing:.18em; text-transform:uppercase; font-weight:800;
+    color:#04111c; background:linear-gradient(180deg,#7adcff,var(--grid)); border:1px solid #0f7fb8; border-radius:12px; padding:16px; cursor:pointer; box-shadow:0 0 22px -6px var(--grid-glow);}
   .big-btn:active{transform:translateY(1px);}
   .cpu-block{border:1px solid rgba(31,182,255,.2); border-radius:14px; padding:14px 14px 12px; background:linear-gradient(180deg,#0b1424,#070d18);}
-  .cpu-label{font-size:10.5px; letter-spacing:.28em; text-transform:uppercase; color:var(--text-dim); margin-bottom:11px;}
   .lvls{display:grid; grid-template-columns:repeat(3,1fr); gap:9px;}
-  .lvl-btn{
-    font:inherit; font-size:12.5px; letter-spacing:.08em; text-transform:uppercase; font-weight:700; color:var(--text);
-    background:linear-gradient(180deg,#13243c,#0c1626); border:1px solid rgba(31,182,255,.35); border-radius:10px; padding:13px 4px; cursor:pointer;
-  }
+  .lvl-btn{font:inherit; font-size:12.5px; letter-spacing:.08em; text-transform:uppercase; font-weight:700; color:var(--text);
+    background:linear-gradient(180deg,#13243c,#0c1626); border:1px solid rgba(31,182,255,.35); border-radius:10px; padding:13px 4px; cursor:pointer;}
   .lvl-btn[data-level="king"]{border-color:rgba(255,182,80,.5); color:#ffe6a3;}
   .lvl-btn:active{transform:translateY(1px); border-color:var(--grid);}
   .lvl-hint{margin-top:10px; font-size:10px; letter-spacing:.06em; color:var(--text-dim);}
@@ -186,10 +187,18 @@
   <div class="start show" id="start">
     <div class="start-card">
       <div class="crest"><h1>KADOOSH</h1><p>Sword &amp; Shield</p></div>
+      <div style="width:100%">
+        <div class="seg-label">Board</div>
+        <div class="boards" id="boards">
+          <button class="board-btn sel" data-board="3x3">3 × 3<small>3 each</small></button>
+          <button class="board-btn" data-board="5x5">5 × 5<small>5 each</small></button>
+          <button class="board-btn" data-board="9x5">5 × 9<small>5 each</small></button>
+        </div>
+      </div>
       <div class="modes">
         <button class="big-btn" data-mode="pvp">Two players</button>
         <div class="cpu-block">
-          <div class="cpu-label">Play vs CPU</div>
+          <div class="seg-label" style="margin-bottom:11px">Play vs CPU</div>
           <div class="lvls">
             <button class="lvl-btn" data-level="knight">Knight</button>
             <button class="lvl-btn" data-level="prince">Prince</button>
@@ -198,15 +207,15 @@
           <div class="lvl-hint">King is the toughest</div>
         </div>
       </div>
-      <div class="ver" id="ver">v1.0.0</div>
+      <div class="ver" id="ver">v1.3.0</div>
     </div>
   </div>
 
 <script>
 "use strict";
 (function(){
-  const VERSION = "v1.1.0";
-  const N = 9, WIN_ROUNDS = 5;
+  const VERSION = "v1.3.0";
+  const WIN_ROUNDS = 5;
   const ENEMY = {S:'G', G:'S'};
   const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
   const ICONS = {
@@ -215,19 +224,47 @@
     skull:  '<svg viewBox="0 0 24 24"><path class="skull" d="M12 2.4 C7.3 2.4 4 6.1 4 10.8 C4 13.6 5.4 15.5 6.7 16.6 V19.4 H8.7 V17.6 H10.6 V19.4 H13.4 V17.6 H15.3 V19.4 H17.3 V16.6 C18.6 15.5 20 13.6 20 10.8 C20 6.1 16.7 2.4 12 2.4 Z"/><circle class="eye" cx="9.1" cy="11" r="2"/><circle class="eye" cx="14.9" cy="11" r="2"/></svg>'
   };
 
+  const BOARDS = {
+    '3x3':{rows:3, cols:3, tokens:3},
+    '5x5':{rows:5, cols:5, tokens:5},
+    '9x5':{rows:9, cols:5, tokens:5}
+  };
+
+  // ---------- board geometry (rebuilt per board choice) ----------
+  let ROWS=3, COLS=3, TOKENS=3, N=9, NB=[], DRAW_LIMIT=24;
+  function buildBoard(rows,cols,tokens){
+    ROWS=rows; COLS=cols; TOKENS=tokens; N=rows*cols;
+    NB=new Array(N);
+    for(let i=0;i<N;i++){ const r=(i/cols|0), c=i%cols, o=[];
+      if(r>0)o.push(i-cols); if(r<rows-1)o.push(i+cols);
+      if(c>0)o.push(i-1); if(c<cols-1)o.push(i+1);
+      NB[i]=o;
+    }
+    DRAW_LIMIT = Math.min(60, Math.max(24, N*2));
+  }
+  const neighbors = i => NB[i];
+
+  function applyBoardLayout(){
+    const wrap=document.querySelector('.board-wrap'), board=document.getElementById('board');
+    wrap.style.setProperty('--ar', (COLS/ROWS));
+    board.style.gridTemplateColumns='repeat('+COLS+',1fr)';
+    board.style.gridTemplateRows='repeat('+ROWS+',1fr)';
+    const big=Math.max(ROWS,COLS);
+    const gap = big<=3?12 : big<=5?8 : 6;
+    board.style.gap=gap+'px'; board.style.padding=gap+'px';
+  }
+
   // ---------- live state ----------
   let cells, turn, starter, selected, lastMove, score, busy, matchOver;
   let mode='pvp', level=null, cpuSide=null, awaitingContinue=false, thinking=false;
-
-  const NB = (()=>{ const a=[]; for(let i=0;i<N;i++){ const r=(i/3|0),c=i%3,o=[]; if(r>0)o.push(i-3); if(r<2)o.push(i+3); if(c>0)o.push(i-1); if(c<2)o.push(i+1); a.push(o);} return a; })();
-  const neighbors = i => NB[i];
+  let lastKiller=null, quiet=0;
 
   function newRound(){
     cells = new Array(N).fill(null);
-    [0,1,2].forEach(i=> cells[i]={owner:'S', face:'shield'});
-    [6,7,8].forEach(i=> cells[i]={owner:'G', face:'shield'});
+    for(let c=0;c<COLS;c++){ cells[c]={owner:'S',face:'shield'}; cells[(ROWS-1)*COLS+c]={owner:'G',face:'shield'}; }
     turn = starter; selected = null; lastMove = {S:null, G:null};
     busy = false; awaitingContinue = false; thinking = false;
+    lastKiller = null; quiet = 0;
     render(); maybeCpu();
   }
   function newMatch(){ score = {S:0, G:0}; starter = 'S'; matchOver = false; newRound(); }
@@ -239,45 +276,83 @@
   function canFlip(i){ return cells[i] && cells[i].face!=='skull' && !isUndoFlip(i); }
 
   // ---------- combat ----------
-  // Resolve combat from the active player's perspective (the one who just acted).
-  // A sword next to an enemy sword takes it (attacker wins the clash, defender is in retreat).
-  // A shield surrounded by 2+ enemy swords can't defend both sides and falls.
+  // From the active player's perspective (the one who just acted):
+  //  - an enemy SWORD beside one of your swords is taken (you create the clash, you win it),
+  //  - an enemy SHIELD with 2+ of your swords around it can't defend both sides and falls.
   function resolveAll(arr, active){
     const opp = ENEMY[active], kills = [];
     for(let i=0;i<N;i++){
       const e = arr[i]; if(!e || e.owner!==opp || e.face==='skull') continue;
-      let adjSwords = 0;
-      for(const n of neighbors(i)){ const a=arr[n]; if(a && a.owner===active && a.face==='sword') adjSwords++; }
-      if(e.face==='sword' && adjSwords>=1) kills.push(i);
-      else if(e.face==='shield' && adjSwords>=2) kills.push(i);
+      let adj = 0;
+      for(const n of neighbors(i)){ const a=arr[n]; if(a && a.owner===active && a.face==='sword') adj++; }
+      if(e.face==='sword' && adj>=1) kills.push(i);
+      else if(e.face==='shield' && adj>=2) kills.push(i);
     }
     return kills;
   }
   function aliveIn(arr,owner){ let n=0; for(const c of arr) if(c && c.owner===owner && c.face!=='skull') n++; return n; }
 
-  // ---------- actions ----------
-  function doMove(from,to){ cells[to]=cells[from]; cells[from]=null; lastMove[turn]={t:'move',from,to}; finishTurn(to); }
-  function doFlip(i){ cells[i].face = cells[i].face==='shield'?'sword':'shield'; lastMove[turn]={t:'flip',idx:i}; finishTurn(i); }
+  // Treating skulls as walls, can any Silver and Gold token ever become adjacent?
+  // If the two armies sit in separate regions, no further clash is possible.
+  function contactPossible(arr){
+    const comp=new Array(N).fill(false);
+    for(let i=0;i<N;i++){
+      if(comp[i]) continue;
+      const c0=arr[i]; if(c0 && c0.face==='skull') continue;
+      let hasS=false, hasG=false; const stack=[i]; comp[i]=true;
+      while(stack.length){ const x=stack.pop(); const t=arr[x];
+        if(t && t.face!=='skull'){ if(t.owner==='S')hasS=true; else if(t.owner==='G')hasG=true; }
+        for(const n of neighbors(x)){ const e=arr[n]; if(!comp[n] && !(e&&e.face==='skull')){ comp[n]=true; stack.push(n); } }
+      }
+      if(hasS && hasG) return true;
+    }
+    return false;
+  }
 
-  function finishTurn(actedIdx){
+  // ---------- actions ----------
+  function doMove(from,to){ cells[to]=cells[from]; cells[from]=null; lastMove[turn]={t:'move',from,to}; finishTurn(); }
+  function doFlip(i){ cells[i].face = cells[i].face==='shield'?'sword':'shield'; lastMove[turn]={t:'flip',idx:i}; finishTurn(); }
+
+  function hasAnyLegalMove(p){
+    const lm=lastMove[p];
+    for(let i=0;i<N;i++){ const t=cells[i]; if(!t||t.owner!==p||t.face==='skull') continue;
+      for(const n of neighbors(i)){ if(cells[n]===null && !(lm&&lm.t==='move'&&lm.from===n&&lm.to===i)) return true; }
+      if(!(lm&&lm.t==='flip'&&lm.idx===i)) return true;
+    }
+    return false;
+  }
+
+  function finishTurn(){
     selected=null;
     const kills=resolveAll(cells,turn);
     if(kills.length){
-      busy=true; kills.forEach(k=> cells[k].face='skull'); render();
-      kadoosh(kills, ()=>{ busy=false; if(!checkRoundEnd()){ turn=ENEMY[turn]; render(); maybeCpu(); } });
-    } else { turn=ENEMY[turn]; render(); maybeCpu(); }
+      busy=true; kills.forEach(k=> cells[k].face='skull'); lastKiller=turn; quiet=0; render();
+      kadoosh(kills, ()=>{ busy=false; concludeTurn(); });
+    } else concludeTurn();
   }
-
-  function checkRoundEnd(){
-    const loser = aliveIn(cells,'S')===0 ? 'S' : aliveIn(cells,'G')===0 ? 'G' : null;
-    if(!loser) return false;
-    const winner=ENEMY[loser]; score[winner]++; render();
+  function concludeTurn(){
+    const aS=aliveIn(cells,'S'), aG=aliveIn(cells,'G');
+    if(aS===0 || aG===0){ concludeRound(aS,aG,false); return; }            // a side wiped out
+    if(!contactPossible(cells)){ concludeRound(aS,aG,true); return; }       // armies can never meet -> last kill wins
+    turn=ENEMY[turn]; quiet++;
+    if(!hasAnyLegalMove(turn) || quiet>=DRAW_LIMIT){ concludeRound(aliveIn(cells,'S'),aliveIn(cells,'G'),true); return; }
+    render(); maybeCpu();
+  }
+  function concludeRound(aS,aG,draw){
+    let winner;
+    if(!draw && aS>0 && aG===0) winner='S';
+    else if(!draw && aG>0 && aS===0) winner='G';
+    else winner = lastKiller || (aS>aG?'S':aG>aS?'G':ENEMY[starter]); // stalemate -> last to kill wins
+    awardRound(winner);
+  }
+  function awardRound(winner){
+    score[winner]++; render();
     if(score[winner]>=WIN_ROUNDS){ matchOver=true; showMatchEnd(winner); }
     else { awaitingContinue=true; showRoundEnd(winner); }
-    return true;
   }
 
   // ---------- CPU ----------
+  let NODES=0; const NODE_CAP=120000;
   function genMoves(c, t, last, ignore){
     const out=[];
     for(let i=0;i<N;i++){ const tok=c[i]; if(!tok||tok.owner!==t||tok.face==='skull') continue;
@@ -287,18 +362,16 @@
     }
     return out;
   }
-  function moves(s){ let m=genMoves(s.c,s.turn,s.last,false); if(m.length===0) m=genMoves(s.c,s.turn,s.last,true); return m; }
+  function moves(s){ return genMoves(s.c,s.turn,s.last,false); }
   function apply(s,mv){
     const c=s.c.map(e=> e?{owner:e.owner,face:e.face}:null);
-    let acted;
-    if(mv.t==='move'){ c[mv.to]=c[mv.from]; c[mv.from]=null; acted=mv.to; }
-    else { c[mv.idx].face = c[mv.idx].face==='shield'?'sword':'shield'; acted=mv.idx; }
+    if(mv.t==='move'){ c[mv.to]=c[mv.from]; c[mv.from]=null; }
+    else { c[mv.idx].face = c[mv.idx].face==='shield'?'sword':'shield'; }
     resolveAll(c, s.turn).forEach(k=> c[k].face='skull');
     const last={S:s.last.S?Object.assign({},s.last.S):null, G:s.last.G?Object.assign({},s.last.G):null};
     last[s.turn]= mv.t==='move'?{t:'move',from:mv.from,to:mv.to}:{t:'flip',idx:mv.idx};
     return {c, turn:ENEMY[s.turn], last};
   }
-  // Can the opponent take token i with a single move under the new combat rules?
   function killable(c,i){
     const tok=c[i]; if(!tok||tok.face==='skull') return false;
     const att=ENEMY[tok.owner];
@@ -307,11 +380,10 @@
       if(e){ if(e.owner===att && e.face==='sword') adjSwords++; if(e.owner===att && e.face==='shield') adjShields++; }
       else empties.push(j);
     }
-    // attacker could add one more adjacent sword next move: flip an adjacent shield, or slide a sword in
-    let canAddSword = adjShields>0;
-    if(!canAddSword) for(const j of empties){ for(const k of neighbors(j)){ const a=c[k]; if(a && a.owner===att && a.face==='sword' && k!==i){ canAddSword=true; break; } } if(canAddSword) break; }
-    if(tok.face==='sword') return adjSwords>=1 || canAddSword;
-    return adjSwords>=2 || (adjSwords===1 && canAddSword);
+    let canAdd = adjShields>0;
+    if(!canAdd) for(const j of empties){ for(const k of neighbors(j)){ const a=c[k]; if(a && a.owner===att && a.face==='sword' && k!==i){ canAdd=true; break; } } if(canAdd) break; }
+    if(tok.face==='sword') return adjSwords>=1 || canAdd;
+    return adjSwords>=2 || (adjSwords===1 && canAdd);
   }
   function threatenedCount(c,victim){
     let n=0;
@@ -324,26 +396,33 @@
     let sc=1000*(myA-opA);
     sc -= 140*threatenedCount(s.c,me);
     sc += 120*threatenedCount(s.c,opp);
-    const ctr=s.c[4]; if(ctr && ctr.face!=='skull') sc += (ctr.owner===me?8:-8);
     return sc;
   }
   function negamax(s,depth,alpha,beta){
     const me=s.turn, opp=ENEMY[me];
+    if(++NODES>NODE_CAP) return evalFor(s,me);
     const myA=aliveIn(s.c,me), opA=aliveIn(s.c,opp);
     if(opA===0) return 100000+depth;
     if(myA===0) return -100000-depth;
     if(depth===0) return evalFor(s,me);
     const ms=moves(s);
+    if(ms.length===0) return evalFor(s,me);
     ms.sort((a,b)=> evalFor(apply(s,b),me)-evalFor(apply(s,a),me));
     let best=-Infinity;
     for(const mv of ms){ const v=-negamax(apply(s,mv),depth-1,-beta,-alpha); if(v>best)best=v; if(best>alpha)alpha=best; if(alpha>=beta)break; }
     return best;
   }
+  function cpuDepth(){
+    if(level==='knight') return 1;
+    if(level==='prince') return N<=9?3:2;
+    return N<=9?5:3; // king
+  }
   function chooseCpuMove(){
+    NODES=0;
     const s={ c:cells.map(e=> e?{owner:e.owner,face:e.face}:null), turn,
               last:{S:lastMove.S?Object.assign({},lastMove.S):null, G:lastMove.G?Object.assign({},lastMove.G):null} };
     const ms=moves(s); if(ms.length===0) return null;
-    const depth = level==='knight'?1 : level==='prince'?3 : 5;
+    const depth=cpuDepth();
     if(level==='knight' && Math.random()<0.35) return ms[(Math.random()*ms.length)|0];
     ms.sort((a,b)=> evalFor(apply(s,b),cpuSide)-evalFor(apply(s,a),cpuSide));
     let best=ms[0], bestV=-Infinity;
@@ -358,7 +437,7 @@
       const mv=chooseCpuMove(); thinking=false;
       if(!mv){ render(); return; }
       if(mv.t==='move') doMove(mv.from,mv.to); else doFlip(mv.idx);
-    }, 480);
+    }, 460);
   }
 
   // ---------- KADOOSH ----------
@@ -437,27 +516,32 @@
   document.getElementById('btn-rules').onclick=()=>{
     showOverlay('<div class="rules"><h2 style="text-align:center">How it plays</h2>'+
       '<p>Tap one of your tokens, then tap a glowing square to <b>move</b> (up/down/left/right into an empty square), or use <b>flip</b> to switch between shield and sword.</p>'+
-      '<p>End your turn as a <b>sword</b> next to an enemy <b>sword</b> to take it — <i>KADOOSH</i> — and it becomes a skull that blocks the square. Whoever strikes on their turn wins the clash; the other is in retreat.</p>'+
-      '<p>A <b>shield</b> blocks a single sword, but caught between <b>two</b> enemy swords it can\'t defend both sides and falls.</p>'+
-      '<p>Take out all three enemy tokens to win the round. First to '+WIN_ROUNDS+' rounds wins. You can\'t undo your own last move.</p>'+
-      '<p class="flag">Design forks I picked — say the word to change any: (1) the strike triggers on moving into range, not only on a flip; (2) flips go both ways; (3) Silver starts on top.</p>'+
+      '<p>End your turn as a <b>sword</b> next to an enemy <b>sword</b> to take it — <i>KADOOSH</i> — and it becomes a skull that blocks the square. Whoever strikes on their turn wins the clash. A <b>shield</b> blocks a single sword, but two enemy swords around it can\'t be defended and it falls.</p>'+
+      '<p>Take out all enemy tokens to win the round. If the two sides are walled apart by skulls and can never meet again, the round goes to whoever struck last. First to '+WIN_ROUNDS+' rounds wins. You can\'t undo your own last move.</p>'+
       '</div><div style="text-align:center"><button id="ov-close">Got it</button></div>');
     document.getElementById('ov-close').onclick=hideOverlay;
   };
 
   const startEl=document.getElementById('start');
+  let selectedBoardKey='3x3';
   function startShow(){ startEl.classList.add('show'); }
   function startHide(){ startEl.classList.remove('show'); }
   function startGame(m, lvl){
     mode=m; level=lvl||null; cpuSide = (m==='cpu') ? 'S' : null;
     document.body.classList.toggle('pvp', m==='pvp');
+    const cfg=BOARDS[selectedBoardKey]; buildBoard(cfg.rows,cfg.cols,cfg.tokens); applyBoardLayout();
     startHide(); newMatch();
   }
+  document.getElementById('boards').querySelectorAll('.board-btn').forEach(b=> b.onclick=()=>{
+    selectedBoardKey=b.dataset.board;
+    document.getElementById('boards').querySelectorAll('.board-btn').forEach(x=> x.classList.toggle('sel', x===b));
+  });
   startEl.querySelector('[data-mode="pvp"]').onclick=()=> startGame('pvp');
   startEl.querySelectorAll('.lvl-btn').forEach(b=> b.onclick=()=> startGame('cpu', b.dataset.level));
   document.getElementById('ver').textContent=VERSION;
 
-  // boot: show start; prime a hidden board so layout is ready
+  // boot: prime a board behind the start screen
+  buildBoard(3,3,3); applyBoardLayout();
   score={S:0,G:0}; cells=new Array(N).fill(null); turn='S'; selected=null; lastMove={S:null,G:null};
   busy=false; matchOver=false; render();
 })();
