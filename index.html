@@ -96,7 +96,12 @@
     100%{opacity:0; transform:translate(-50%,-50%) scale(1.05) rotate(0);}
   }
   .burst svg{display:block; filter:drop-shadow(0 0 14px rgba(31,182,255,.8));}
+  .burst .kstar{fill:#1fb6ff; stroke:#0a4f7a;}
   .burst .word{font-family:"Arial Black",Impact,system-ui,sans-serif; font-weight:900; font-style:italic; font-size:30px; letter-spacing:.02em; fill:#fff; stroke:#0a4f7a; stroke-width:5px; paint-order:stroke;}
+  .burst .kpre{font-family:"Arial Black",Impact,system-ui,sans-serif; font-weight:900; font-style:italic; font-size:19px; letter-spacing:.04em; fill:#fff; stroke:#0a4f7a; stroke-width:4px; paint-order:stroke;}
+  .burst.red svg{filter:drop-shadow(0 0 16px rgba(255,70,100,.85));}
+  .burst.red .kstar{fill:#ff3b5c; stroke:#7a1020;}
+  .burst.red .word, .burst.red .kpre{stroke:#7a1020;}
   .burst.tall.go{animation:kadooshTall .9s cubic-bezier(.2,1.3,.4,1) forwards;}
   @keyframes kadooshTall{
     0%{opacity:0; transform:translate(-50%,-50%) rotate(-90deg) scale(calc(var(--k-scale,3) * .35));}
@@ -112,7 +117,7 @@
     .cell.target::after{animation:none;}
   }
 
-  .overlay{position:fixed; inset:0; background:rgba(4,7,14,.78); z-index:40; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .2s; backdrop-filter:blur(2px);}
+  .overlay{position:fixed; inset:0; background:rgba(4,7,14,.78); z-index:70; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .2s; backdrop-filter:blur(2px);}
   .overlay.show{opacity:1; pointer-events:auto;}
   .card{width:min(90vw,360px); text-align:center; background:linear-gradient(180deg,#0d1726,#080e1a); border:1px solid rgba(31,182,255,.25); border-radius:16px; padding:22px 20px; box-shadow:0 20px 50px -16px #000, 0 0 40px -16px var(--grid-glow);}
   .card h2{margin:0 0 6px; font-size:21px; letter-spacing:.06em;}
@@ -169,6 +174,9 @@
   .lvl-btn:active{transform:translateY(1px); border-color:var(--grid);}
   .lvl-hint{margin-top:10px; font-size:10px; letter-spacing:.06em; color:var(--text-dim);}
   .ver{font-size:11px; letter-spacing:.3em; color:var(--text-dim);}
+  .howto{font:inherit; font-size:11.5px; letter-spacing:.16em; text-transform:uppercase; font-weight:700; color:var(--grid);
+    background:linear-gradient(180deg,#0b1424,#070d18); border:1px solid rgba(31,182,255,.35); border-radius:9px; padding:10px 18px; cursor:pointer;}
+  .howto:active{transform:translateY(1px);}
 </style>
 </head>
 <body>
@@ -198,10 +206,11 @@
   </div>
 
   <div class="burst" id="burst">
-    <svg width="220" height="160" viewBox="0 0 220 160">
-      <polygon fill="#1fb6ff" stroke="#0a4f7a" stroke-width="3"
-        points="110,4 130,46 178,30 158,72 214,80 158,92 184,140 132,112 118,156 102,112 44,140 64,92 6,80 64,70 40,30 90,46"/>
-      <text class="word" x="110" y="92" text-anchor="middle">KADOOSH!</text>
+    <svg width="220" height="172" viewBox="0 0 220 172">
+      <polygon class="kstar" stroke-width="3"
+        points="110,10 130,52 178,36 158,78 214,86 158,98 184,146 132,118 118,162 102,118 44,146 64,98 6,86 64,76 40,36 90,52"/>
+      <text class="kpre" x="110" y="62" text-anchor="middle"></text>
+      <text class="word" x="110" y="104" text-anchor="middle">KADOOSH!</text>
     </svg>
   </div>
 
@@ -230,14 +239,15 @@
           <div class="lvl-hint">King is the toughest</div>
         </div>
       </div>
-      <div class="ver" id="ver">v1.3.2</div>
+      <button class="howto" id="btn-howto">How to play</button>
+      <div class="ver" id="ver">v1.4.1</div>
     </div>
   </div>
 
 <script>
 "use strict";
 (function(){
-  const VERSION = "v1.3.2";
+  const VERSION = "v1.4.1";
   const WIN_ROUNDS = 5;
   const ENEMY = {S:'G', G:'S'};
   const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
@@ -346,12 +356,26 @@
     return false;
   }
 
+  // tokens whose every on-board neighbour is an enemy shield are boxed in and die (KABOOSHED)
+  function smotherKills(arr){
+    const out=[];
+    for(let i=0;i<N;i++){ const t=arr[i]; if(!t||t.face==='skull') continue;
+      const ns=neighbors(i); let all=ns.length>0;
+      for(const j of ns){ const e=arr[j]; if(!(e && e.owner===ENEMY[t.owner] && e.face==='shield')){ all=false; break; } }
+      if(all) out.push(i);
+    }
+    return out;
+  }
   function finishTurn(){
     selected=null;
-    const kills=resolveAll(cells,turn);
-    if(kills.length){
-      busy=true; kills.forEach(k=> cells[k].face='skull'); lastKiller=turn; quiet=0; render();
-      kadoosh(kills, ()=>{ busy=false; concludeTurn(); });
+    const swordK=resolveAll(cells,turn); swordK.forEach(k=> cells[k].face='skull');
+    if(swordK.length) lastKiller=turn;
+    const smoK=smotherKills(cells); smoK.forEach(k=>{ const o=cells[k].owner; cells[k].face='skull'; lastKiller=ENEMY[o]; });
+    if(swordK.length+smoK.length){
+      quiet=0; busy=true; render();
+      const red = swordK.length===0;
+      const at = swordK.length?swordK[0]:smoK[0];
+      splash(at, red?'KABOOSHED':'KADOOSH', red, red?1:swordK.length, ()=>{ busy=false; concludeTurn(); });
     } else concludeTurn();
   }
   function concludeTurn(){
@@ -392,6 +416,7 @@
     if(mv.t==='move'){ c[mv.to]=c[mv.from]; c[mv.from]=null; }
     else { c[mv.idx].face = c[mv.idx].face==='shield'?'sword':'shield'; }
     resolveAll(c, s.turn).forEach(k=> c[k].face='skull');
+    smotherKills(c).forEach(k=> c[k].face='skull');
     const last={S:s.last.S?Object.assign({},s.last.S):null, G:s.last.G?Object.assign({},s.last.G):null};
     last[s.turn]= mv.t==='move'?{t:'move',from:mv.from,to:mv.to}:{t:'flip',idx:mv.idx};
     return {c, turn:ENEMY[s.turn], last};
@@ -465,20 +490,24 @@
   }
 
   // ---------- KADOOSH ----------
-  function kadoosh(kills, done){
+  function splash(idx, word, red, count, done){
     const burst=document.getElementById('burst'), board=document.getElementById('board');
+    const pre = count>=5?'MEGA':({2:'DOUBLE',3:'TRIPLE',4:'QUADRUPLE'}[count]||'');
+    burst.querySelector('.kpre').textContent = pre;
+    const w=burst.querySelector('.word'); w.textContent=word+'!'; w.style.fontSize=(word.length>=9?24:30)+'px';
+    burst.classList.toggle('red', red);
     const tall=document.body.classList.contains('tall');
     burst.classList.toggle('tall', tall);
     if(tall){
       burst.style.left='50%'; burst.style.top='50%';
-      burst.style.setProperty('--k-scale', Math.max(2.2, window.innerHeight/200).toFixed(2));
+      burst.style.setProperty('--k-scale', Math.max(2.0, window.innerHeight/220).toFixed(2));
     } else {
-      const tr=board.children[kills[0]].getBoundingClientRect();
+      const tr=board.children[idx].getBoundingClientRect();
       burst.style.left=(tr.left+tr.width/2)+'px';
       burst.style.top=(tr.top+tr.height/2)+'px';
     }
     burst.classList.remove('go'); void burst.offsetWidth; burst.classList.add('go');
-    setTimeout(done, tall?880:760);
+    setTimeout(done, tall?900:780);
   }
 
   // ---------- render ----------
@@ -543,14 +572,17 @@
   // ---------- links / start ----------
   document.getElementById('btn-new').onclick=()=>{ hideOverlay(); newMatch(); };
   document.getElementById('btn-menu').onclick=()=>{ hideOverlay(); startShow(); };
-  document.getElementById('btn-rules').onclick=()=>{
+  function showRules(){
     showOverlay('<div class="rules"><h2 style="text-align:center">How it plays</h2>'+
       '<p>Tap one of your tokens, then tap a glowing square to <b>move</b> (up/down/left/right into an empty square), or use <b>flip</b> to switch between shield and sword.</p>'+
-      '<p>End your turn as a <b>sword</b> next to an enemy <b>sword</b> to take it — <i>KADOOSH</i> — and it becomes a skull that blocks the square. Whoever strikes on their turn wins the clash. A <b>shield</b> blocks a single sword, but two enemy swords around it can\'t be defended and it falls.</p>'+
+      '<p>End your turn as a <b>sword</b> next to an enemy <b>sword</b> to take it — <i>KADOOSH</i> — and it becomes a skull that blocks the square. Whoever strikes on their turn wins the clash. A <b>shield</b> blocks a single sword, but two enemy swords around it can\'t be defended and it falls. Take two, three or four foes in one move for a <i>DOUBLE</i>, <i>TRIPLE</i> or <i>QUADRUPLE KADOOSH</i>.</p>'+
+      '<p>A coin boxed in on every side by enemy <b>shields</b> can\'t move and is <i>KABOOSHED</i> — it dies too. So shields attack by surrounding.</p>'+
       '<p>Take out all enemy tokens to win the round. If the two sides are walled apart by skulls and can never meet again, the round goes to whoever struck last. First to '+WIN_ROUNDS+' rounds wins. You can\'t undo your own last move.</p>'+
       '</div><div style="text-align:center"><button id="ov-close">Got it</button></div>');
     document.getElementById('ov-close').onclick=hideOverlay;
-  };
+  }
+  document.getElementById('btn-rules').onclick=showRules;
+  document.getElementById('btn-howto').onclick=showRules;
 
   const startEl=document.getElementById('start');
   let selectedBoardKey='3x3';
