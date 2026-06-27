@@ -240,14 +240,14 @@
         </div>
       </div>
       <button class="howto" id="btn-howto">How to play</button>
-      <div class="ver" id="ver">v1.4.1</div>
+      <div class="ver" id="ver">v1.5.0</div>
     </div>
   </div>
 
 <script>
 "use strict";
 (function(){
-  const VERSION = "v1.4.1";
+  const VERSION = "v1.5.0";
   const WIN_ROUNDS = 5;
   const ENEMY = {S:'G', G:'S'};
   const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
@@ -310,17 +310,24 @@
   function canFlip(i){ return cells[i] && cells[i].face!=='skull' && !isUndoFlip(i); }
 
   // ---------- combat ----------
-  // From the active player's perspective (the one who just acted):
-  //  - an enemy SWORD beside one of your swords is taken (you create the clash, you win it),
-  //  - an enemy SHIELD with 2+ of your swords around it can't defend both sides and falls.
+  // KADOOSH (blade) deaths, resolved across the whole board after a move:
+  //  - an enemy SWORD beside one of the mover's swords is taken (you win the clash you create),
+  //  - ANY shield next to 2+ enemy swords falls — including a shield that just moved into them.
   function resolveAll(arr, active){
-    const opp = ENEMY[active], kills = [];
+    const kills = [];
     for(let i=0;i<N;i++){
-      const e = arr[i]; if(!e || e.owner!==opp || e.face==='skull') continue;
-      let adj = 0;
-      for(const n of neighbors(i)){ const a=arr[n]; if(a && a.owner===active && a.face==='sword') adj++; }
-      if(e.face==='sword' && adj>=1) kills.push(i);
-      else if(e.face==='shield' && adj>=2) kills.push(i);
+      const e = arr[i]; if(!e || e.face==='skull') continue;
+      if(e.face==='sword'){
+        // an enemy-of-mover sword falls if a mover sword sits beside it (mover wins the clash)
+        if(e.owner!==active){
+          for(const n of neighbors(i)){ const a=arr[n]; if(a && a.owner===active && a.face==='sword'){ kills.push(i); break; } }
+        }
+      } else {
+        // a shield falls when 2+ of its enemy's swords surround it (incl. a shield that moved in)
+        const foe = ENEMY[e.owner];
+        let sw=0; for(const n of neighbors(i)){ const a=arr[n]; if(a && a.owner===foe && a.face==='sword') sw++; }
+        if(sw>=2) kills.push(i);
+      }
     }
     return kills;
   }
@@ -357,24 +364,31 @@
   }
 
   // tokens whose every on-board neighbour is an enemy shield are boxed in and die (KABOOSHED)
-  function smotherKills(arr){
-    const out=[];
-    for(let i=0;i<N;i++){ const t=arr[i]; if(!t||t.face==='skull') continue;
-      const ns=neighbors(i); let all=ns.length>0;
-      for(const j of ns){ const e=arr[j]; if(!(e && e.owner===ENEMY[t.owner] && e.face==='shield')){ all=false; break; } }
-      if(all) out.push(i);
+  // KABOOSHED: a piece that can't move — every on-board neighbour is a skull or an enemy
+  // piece (no empty square and no friendly piece beside it) — is crushed. Cascades.
+  function boxedKills(arr){
+    const out=[]; let changed=true;
+    while(changed){ changed=false;
+      for(let i=0;i<N;i++){ const t=arr[i]; if(!t||t.face==='skull') continue;
+        const ns=neighbors(i); if(!ns.length) continue;
+        let boxed=true;
+        for(const j of ns){ const e=arr[j];
+          if(!e || (e.owner===t.owner && e.face!=='skull')){ boxed=false; break; } // empty or friendly piece -> not boxed
+        }
+        if(boxed){ arr[i].face='skull'; out.push(i); changed=true; }
+      }
     }
     return out;
   }
   function finishTurn(){
     selected=null;
     const swordK=resolveAll(cells,turn); swordK.forEach(k=> cells[k].face='skull');
-    if(swordK.length) lastKiller=turn;
-    const smoK=smotherKills(cells); smoK.forEach(k=>{ const o=cells[k].owner; cells[k].face='skull'; lastKiller=ENEMY[o]; });
-    if(swordK.length+smoK.length){
+    const boxK=boxedKills(cells);
+    swordK.concat(boxK).forEach(k=>{ lastKiller=ENEMY[cells[k].owner]; });
+    if(swordK.length+boxK.length){
       quiet=0; busy=true; render();
       const red = swordK.length===0;
-      const at = swordK.length?swordK[0]:smoK[0];
+      const at = swordK.length?swordK[0]:boxK[0];
       splash(at, red?'KABOOSHED':'KADOOSH', red, red?1:swordK.length, ()=>{ busy=false; concludeTurn(); });
     } else concludeTurn();
   }
@@ -416,7 +430,7 @@
     if(mv.t==='move'){ c[mv.to]=c[mv.from]; c[mv.from]=null; }
     else { c[mv.idx].face = c[mv.idx].face==='shield'?'sword':'shield'; }
     resolveAll(c, s.turn).forEach(k=> c[k].face='skull');
-    smotherKills(c).forEach(k=> c[k].face='skull');
+    boxedKills(c);
     const last={S:s.last.S?Object.assign({},s.last.S):null, G:s.last.G?Object.assign({},s.last.G):null};
     last[s.turn]= mv.t==='move'?{t:'move',from:mv.from,to:mv.to}:{t:'flip',idx:mv.idx};
     return {c, turn:ENEMY[s.turn], last};
@@ -575,8 +589,8 @@
   function showRules(){
     showOverlay('<div class="rules"><h2 style="text-align:center">How it plays</h2>'+
       '<p>Tap one of your tokens, then tap a glowing square to <b>move</b> (up/down/left/right into an empty square), or use <b>flip</b> to switch between shield and sword.</p>'+
-      '<p>End your turn as a <b>sword</b> next to an enemy <b>sword</b> to take it — <i>KADOOSH</i> — and it becomes a skull that blocks the square. Whoever strikes on their turn wins the clash. A <b>shield</b> blocks a single sword, but two enemy swords around it can\'t be defended and it falls. Take two, three or four foes in one move for a <i>DOUBLE</i>, <i>TRIPLE</i> or <i>QUADRUPLE KADOOSH</i>.</p>'+
-      '<p>A coin boxed in on every side by enemy <b>shields</b> can\'t move and is <i>KABOOSHED</i> — it dies too. So shields attack by surrounding.</p>'+
+      '<p>End your turn as a <b>sword</b> next to an enemy <b>sword</b> to take it — <i>KADOOSH</i>. A <b>shield</b> blocks a single sword, but a shield with <b>two</b> enemy swords beside it falls — so moving a shield next to two enemy swords gets it <i>KADOOSHED</i> too. Take two, three or four foes in one move for a <i>DOUBLE</i>, <i>TRIPLE</i> or <i>QUADRUPLE KADOOSH</i>.</p>'+
+      '<p>A piece that can\'t move — every side blocked by skulls or enemy pieces — is crushed: <i>KABOOSHED</i>. So you can win a piece by boxing it in.</p>'+
       '<p>Take out all enemy tokens to win the round. If the two sides are walled apart by skulls and can never meet again, the round goes to whoever struck last. First to '+WIN_ROUNDS+' rounds wins. You can\'t undo your own last move.</p>'+
       '</div><div style="text-align:center"><button id="ov-close">Got it</button></div>');
     document.getElementById('ov-close').onclick=hideOverlay;
