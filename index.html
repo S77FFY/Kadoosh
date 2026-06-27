@@ -12,7 +12,7 @@
     --silver-1:#f6fbff; --silver-2:#aac1d4; --silver-edge:#7d93a8;
     --danger:#ff486b;
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation;}
   html,body{margin:0; height:100%;}
   body{
     background:radial-gradient(120% 90% at 50% -10%, #0d1a30 0%, #070c18 55%, #04060d 100%);
@@ -240,14 +240,14 @@
         </div>
       </div>
       <button class="howto" id="btn-howto">How to play</button>
-      <div class="ver" id="ver">v1.5.0</div>
+      <div class="ver" id="ver">v1.5.1</div>
     </div>
   </div>
 
 <script>
 "use strict";
 (function(){
-  const VERSION = "v1.5.0";
+  const VERSION = "v1.5.1";
   const WIN_ROUNDS = 5;
   const ENEMY = {S:'G', G:'S'};
   const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
@@ -620,6 +620,9 @@
   buildBoard(3,3,3); applyBoardLayout();
   score={S:0,G:0}; cells=new Array(N).fill(null); turn='S'; selected=null; lastMove={S:null,G:null};
   busy=false; matchOver=false; render();
+  // keep it fullscreen: stop iOS double-tap and pinch zoom
+  ['gesturestart','gesturechange','gestureend'].forEach(ev=> document.addEventListener(ev, e=> e.preventDefault()));
+  document.addEventListener('dblclick', e=> e.preventDefault(), {passive:false});
 })();
 </script>
 </body>
